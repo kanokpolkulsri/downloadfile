@@ -14,7 +14,7 @@ Following these commands to run the program:
 ```
 npm install
 node main.js
-node main.test.js
+npm run test
 ```
 
 ### REQUIRED TOOLS
