@@ -1,60 +1,53 @@
 const MAIN = require('./main')
+const Fs = require('fs')
 
-/* change test location here */
-let location = ""
-
-describe('SUBFUNCTION CASES', () => {
-    it("unique name: protocol", () => {
-        expect(MAIN.uniqueName("ftp://speedtest.tele2.net/5MB.zip")).toContain("ftp")
-    })
-    it("unique name: name", () => {
-        expect(MAIN.uniqueName("ftp://speedtest.tele2.net/5MB.zip")).toContain("speedtesttele2net5MBzip")
-    })
-    it("unique name: type of file", () => {
-        expect(MAIN.uniqueName("ftp://speedtest.tele2.net/5MB.zip")).toContain(".zip")
-    })
-    it("configurable location: exists & mkdir", () => {
-        expect(() => {MAIN.isLocationExists("/config/fake/path/")}).toThrow()
-    })
-    it("configurable location: syntax", () => {
-        expect(() => {MAIN.isLocationSyntax("/config/fake/path")}).toBeTruthy()
-    })
-    it("configurable location: delete file(s)", () => {
-        expect(() => {MAIN.deleteLoadingFile("/config/fake/path/")}).toThrow()
-    })
-})
+/* change test local location here */
+let location = "/Users/tonplamm/Desktop/agoda/"
 
 describe('DOWNLOAD CASES', () => {
+
+    let deleteFile = (filePath) => {
+        Fs.unlinkSync(filePath)
+    }
+
     it("http", () => {
         let source = "http://tineye.com/images/widgets/mona.jpg"
-        return MAIN.download(source, location).then(data => {
+        let filePath = location + "http_tineyecomimageswidgetsmonajpg.jpg"
+        return MAIN.test(source, location).then(data => {
             expect(data).toEqual("<success>: " + source)
+            deleteFile(filePath)
         })
-    }, 30000)
+    }, 10000)
     it("https", () => {
-        let source = "https://unsplash.com/photos/AaEQmoufHLk/download?force=true"
-        return MAIN.download(source, location).then(data => {
+        let source = "https://docs.uproc.io/pdf/resumen_del_servicio_ES.pdf"
+        let filePath = location + "https_docsuprociopdfresumendelservicioESpdf.pdf"
+        return MAIN.test(source, location).then(data => {
             expect(data).toEqual("<success>: " + source)
+            deleteFile(filePath)
         })
-    }, 30000)
-    it("ftp: case 1", () => {
-        let source = "ftp://speedtest.tele2.net/5MB.zip"
-        return MAIN.download(source, location).then(data => {
+    }, 10000)
+    it("ftp", () => {
+        let source = "ftp://anonymous:miemail%40gmail.com@speedtest.tele2.net/100KB.zip"
+        let filePath = location + "ftp_anonymousmiemail40gmailcomspeedtesttele2net100KBzip.zip"
+        return MAIN.test(source, location).then(data => {
             expect(data).toEqual("<success>: " + source)
+            deleteFile(filePath)
         })
-    }, 30000)
-    it("ftp: case 2", () => {
-        let source = "ftp://ftp.denx.de/pub/u-boot/u-boot-2011.12.tar.bz2"
-        return MAIN.download(source, location).then(data => {
+    }, 10000)
+    it("sftp", () => {
+        let source = "sftp://demo:password@test.rebex.net/readme.txt"
+        let filePath = location + "sftp_demopasswordtestrebexnetreadmetxt.txt"
+        return MAIN.test(source, location).then(data => {
             expect(data).toEqual("<success>: " + source)
+            deleteFile(filePath)
         })
-    }, 30000)
-    
-    
-})
-
-/* PROCESS */
-process.on('SIGINT',  () => {
-    deleteLoadingFile(Input.location)
-    process.exit()
+    }, 10000)
+    it("scp", () => {
+        let source = "scp://demo:password@test.rebex.net/readme.txt"
+        let filePath = location + "scp_demopasswordtestrebexnetreadmetxt.txt"
+        return MAIN.test(source, location).then(data => {
+            expect(data).toEqual("<success>: " + source)
+            deleteFile(filePath)
+        })
+    }, 10000)    
 })

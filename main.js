@@ -3,15 +3,18 @@ const Path = require('path')
 const Axios = require('axios')
 const Input = require('./input')
 const Client = require('ftp')
+const scpClient = require('scp2')
 const url = require('url')
+Axios.defaults.adapter = require('axios/lib/adapters/http')
 
-let SOURCES = Input.sources
-let LOCATION = Input.location
+let SOURCES = ""
+let LOCATION = ""
+let supportProtocol = ["http", "https", "ftp", "scp", "sftp"]
 
 /* FUNCTION */
 uniqueName = (source) => {
     let typeOfFile = Path.basename(source).split(".")[1] === undefined ? "" : "." + Path.basename(source).split(".")[1]
-    let name = source.split("://")[1].replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"")
+    let name = source.split("://")[1].replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?@]/g,"")
     let protocol = source.split("://")[0] + "_"
     let status = "(loading)_"
     return (status + protocol + name + typeOfFile)
@@ -40,42 +43,20 @@ setLocation = () => {
 }
 
 getProtocol = (source) => {
-    let supportProtocol = ["http", "https", "ftp", "scp"]
     let protocol = source.split(":")[0]
     if(supportProtocol.indexOf(protocol) !== -1)
         return protocol
     else
-        return "local"
+        return undefined
 }
 
-downloadHttp = (source) => { 
-    return new Promise((resolve, reject) => {
-        let path = LOCATION + uniqueName(source)
-        let writer = Fs.createWriteStream(path) 
-        Axios({url: source, method: 'GET', responseType: 'stream'})
-        .then(response => {
-            response.data.pipe(writer)
-            let responsePath = response.data._readableState.pipes.path
-            writer.on('finish', () => {
-                Fs.rename(responsePath, responsePath.replace("(loading)_", ""), () => {
-                    resolve("<success>: " + source)
-                })
-            })
-        })
-        .catch(err => {
-            Fs.unlinkSync(path)
-            resolve("<error>: " + source)
-            throw err
-        })
-    })
-}
-
+/* FUNCTION WITH DOWNLOAD */
 checkCredential = (file) => {
     if (file.indexOf("@") !== -1) {
-        var substring = file.split("@")[0].split("://")[1];
-        return substring.indexOf("/") !== -1;
+        var substring = file.split("@")[0].split("://")[1]
+        return substring.indexOf("/") !== -1
     } else {
-        return false;
+        return false
     }
 }
 
@@ -115,6 +96,28 @@ parseUrl = (file) => {
     }
 }
 
+downloadHttp = (source) => { 
+    return new Promise((resolve, reject) => {
+        let path = LOCATION + uniqueName(source)
+        let writer = Fs.createWriteStream(path) 
+        Axios({url: source, method: 'GET', responseType: 'stream'})
+        .then(response => {
+            response.data.pipe(writer)
+            let responsePath = response.data._readableState.pipes.path
+            writer.on('finish', () => {
+                Fs.rename(responsePath, responsePath.replace("(loading)_", ""), () => {
+                    resolve("<success>: " + source)
+                })
+            })
+        })
+        .catch(err => {
+            Fs.unlinkSync(path)
+            resolve("<error>: " + source)
+            throw err
+        })
+    })
+}
+
 getConfigFtp = (source) => {
     let parsed = parseUrl(source)
     let config = {
@@ -152,39 +155,68 @@ downloadFtp = (source) => {
     })
 }
 
+getConfigScp = (source) => {
+    let parsed = parseUrl(source)
+    let config = {
+        host: parsed.host,
+        username: parsed.username,
+        password: parsed.password,
+        path: parsed.remoteFile
+    }
+    return config
+}
+
 downloadScp = (source) => {
     return new Promise((resolve, reject) => {
-        console.log("building downloadFtp")
-        resolve("<success>: " + source)
+        let path = LOCATION + uniqueName(source)
+        let config = getConfigScp(source)
+        scpClient.scp(config, path, (err) => {
+            if(err){
+                Fs.unlinkSync(path)
+                    resolve("<error>: " + source)
+                    throw err;
+            }else{
+                Fs.rename(path, path.replace("(loading)_", ""), () => {
+                    resolve("<success>: " + source)
+                })
+            }
+        })
     })
 }
 
 downloadLocal = (source) => {
     return new Promise((resolve, reject) => {
         console.log("building downloadFtp")
-        resolve("<success>: " + source)
+        resolve("<no support>: " + source)
     })
 }
 
 download = (protocol, source) => {
-
     if(protocol == "http" || protocol == "https"){
         return downloadHttp(source)
     }else if(protocol == "ftp"){
         return downloadFtp(source)
-    }else if(protocol == "scp"){
+    }else if(protocol == "scp" || protocol == "sftp"){
         return downloadScp(source)
-    }else if(protocol == "local"){
+    }else if(protocol == undefined){
         return downloadLocal(source)
     }
 
 }
 
+test = (source, location) => {
+    LOCATION = location
+    let protocol = getProtocol(source)
+    return download(protocol, source)
+}
+
 /* MAIN */
 main = () => {
-    setLocation()
-
     let listDownload = []
+    SOURCES = Input.sources
+    LOCATION = Input.location
+
+    setLocation()
 
     for(let subsource in SOURCES){
         let source = SOURCES[subsource]
@@ -202,4 +234,4 @@ if(require.main === module){
     main()
 }
 
-module.exports = {uniqueName, setLocation, deleteLoadingFile}
+module.exports = {test}
