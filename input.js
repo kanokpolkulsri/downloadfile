@@ -11,7 +11,7 @@
         const location = "/Users/Kulsri/Document/Agoda/Download/"
 */
 
-let sources = []
-let location = ""
+let sources = ["ftp://anonymous:miemail%40gmail.com@speedtest.tele2.net/100KB.zip"]
+let location = "/Users/tonplamm/Desktop/agoda/"
 
 module.exports = {sources, location}

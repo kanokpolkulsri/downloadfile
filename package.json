@@ -3,7 +3,8 @@
         "test": "jest"
     },
     "dependencies": {
-        "axios": "^0.18.0"
+        "axios": "^0.18.0",
+        "ftp": "^0.3.10"
     },
     "devDependencies": {
         "jest": "^24.5.0"
