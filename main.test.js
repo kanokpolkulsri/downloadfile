@@ -49,5 +49,13 @@ describe('DOWNLOAD CASES', () => {
             expect(data).toEqual("<success>: " + source)
             deleteFile(filePath)
         })
-    }, 10000)    
+    }, 10000)
+    it("ssh", () => {
+        let source = "ssh://demo:password@test.rebex.net/readme.txt"
+        let filePath = location + "ssh_demopasswordtestrebexnetreadmetxt.txt"
+        return MAIN.test(source, location).then(data => {
+            expect(data).toEqual("<success>: " + source)
+            deleteFile(filePath)
+        })
+    }, 10000)
 })

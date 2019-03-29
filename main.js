@@ -5,11 +5,13 @@ const Input = require('./input')
 const Client = require('ftp')
 const scpClient = require('scp2')
 const url = require('url')
+const SSH2Utils = require('ssh2-utils')
+const ssh = new SSH2Utils()
 Axios.defaults.adapter = require('axios/lib/adapters/http')
 
 let SOURCES = ""
 let LOCATION = ""
-let supportProtocol = ["http", "https", "ftp", "scp", "sftp"]
+let supportProtocol = ["http", "https", "ftp", "scp", "sftp", "ssh"]
 
 /* FUNCTION */
 uniqueName = (source) => {
@@ -29,6 +31,7 @@ deleteLoadingFile = () => {
                     Fs.unlinkSync(LOCATION + files[tmp])
                 }
             }
+            process.exit()
         }
     }catch(err){
         throw err
@@ -172,7 +175,7 @@ downloadScp = (source) => {
         let config = getConfigScp(source)
         scpClient.scp(config, path, (err) => {
             if(err){
-                Fs.unlinkSync(path)
+                    Fs.unlinkSync(path)
                     resolve("<error>: " + source)
                     throw err;
             }else{
@@ -184,9 +187,41 @@ downloadScp = (source) => {
     })
 }
 
+getConfigSsh = (source) => {
+    let parsed = parseUrl(source)
+    let configServer = {
+        host: parsed.host,
+        username: parsed.username,
+        password: parsed.password
+    }
+    let configRemotePath = parsed.remoteFile
+    let config = []
+    config.push(configServer, configRemotePath)
+    return config
+}
+
+downloadSsh = (source) => {
+    return new Promise((resolve, reject) => {
+        let path = LOCATION + uniqueName(source)
+        let config = getConfigSsh(source)
+        let configServer = config[0]
+        let configRemotePath = config[1]
+        ssh.getFile(configServer, configRemotePath, path, function(err){
+            if(err){
+                Fs.unlinkSync(path)
+                resolve("<error>: " + source)
+                throw err;
+            }else{
+                Fs.rename(path, path.replace("(loading)_", ""), () => {
+                    resolve("<success>: " + source)
+                })
+            }
+        })
+    })
+}
+
 downloadLocal = (source) => {
     return new Promise((resolve, reject) => {
-        console.log("building downloadFtp")
         resolve("<no support>: " + source)
     })
 }
@@ -198,6 +233,8 @@ download = (protocol, source) => {
         return downloadFtp(source)
     }else if(protocol == "scp" || protocol == "sftp"){
         return downloadScp(source)
+    }else if(protocol == "ssh"){
+        return downloadSsh(source)
     }else if(protocol == undefined){
         return downloadLocal(source)
     }
